@@ -39,6 +39,9 @@ dynamic_scheduler::dynamic_scheduler(long r, long i, long w, long c, long P, std
 		di[i].full = false;
 	}
 
+	for (int i = 0; i < iq_size; i++)
+		iq[i].val = false;
+
 	_pl = 0;
 	_cycle = 0;
 }
@@ -69,9 +72,9 @@ void dynamic_scheduler::issue()
 
 void dynamic_scheduler::dispatch()
 {
-	for (int i = 0; i < width; i++)
+	if (isBndlFull(di) && isEnoughIQ())
 	{
-		if (di[i].full)
+		for (int i = 0; i < width; i++)
 		{
 
 		}
@@ -80,87 +83,74 @@ void dynamic_scheduler::dispatch()
 
 void dynamic_scheduler::regRead()
 {
-	for (int i = 0; i < width; i++)
+	if (isBndlEmpty(di) && isBndlFull(rr))
 	{
-		if (rr[i].full)
+		for (int i = 0; i < width; i++)
 		{
-			// If di is empty
-			if (!di[i].full)
-			{
-				// Read the values from the ARF
-				di[i] = rr[i];
-				rr[i].full = false;
-			}
-			else {} // If di is full, do nothing
+			// Read the values from the ARF
+			di[i] = rr[i];
+			rr[i].full = false;
 		}
 	}
 }
 
 void dynamic_scheduler::rename()
 {
-	for (int i = 0; i < width; i++)
+	if (isBndlEmpty(rr) && isBndlFull(rn) && isEnoughRob())
 	{
-		if (rn[i].full)
+		for (int i = 0; i < width; i++)
 		{
-			//TODO: isRobFull implementation
-			if (!rr[i].full) // || this->isRobFull())
+			if (rn[i].dst != -1)	// If there is a destination
 			{
-				if (rn[i].dst != -1)	// If there is a destination
-				{
-					rmt[rn[i].dst].val = true;	// v = true
-					rmt[rn[i].dst].tag = t;	// tag = the current tail pointer for the ROB
-				}
+				rmt[rn[i].dst].val = true;	// v = true
+				rmt[rn[i].dst].tag = t;	// tag = the current tail pointer for the ROB
+			}
 
-				rob[t].val = 0;			// Clear the value, we don't care about this yet
-				rob[t].dst = rn[i].dst;
-				rob[t].rdy = 0;
-				rob[t].exc = 0;
-				rob[t].mis = 0;
-				rob[t].pc = rn[i].pc;	
+			rob[t].val = 0;			// Clear the value, we don't care about this yet
+			rob[t].dst = rn[i].dst;
+			rob[t].rdy = 0;
+			rob[t].exc = 0;
+			rob[t].mis = 0;
+			rob[t].pc = rn[i].pc;	
 
-				// Rename the source and destination registers
+			// Rename the source and destination registers
+			if (rn[i].dst != -1)
 				rn[i].dst = t;
 
-				if (rn[i].src1 != -1)	// If there is a source 1
-				{
-					if (rmt[rn[i].src1].val)	// If the source has been renamed, get the rob name
-						rn[i].src1 = rmt[rn[i].src1].tag;
-					else {} // the src remains the ARF register						
-				}
-
-				if (rn[i].src2 != -1)	// If there is a source 2
-				{
-					if (rmt[rn[i].src2].val)	// If the source has been renamed, get the rob name
-						rn[i].src2 = rmt[rn[i].src1].tag;
-					else {} // the src remains the ARF register
-				}
-
-				// If we reach the end of the ROB, go back to index 0 --- Circular FIFO
-				if (t == rob_size - 1)
-					t = 0;
-				else
-					t++;
-
-				rr[i] = rn[i];
-				rn[i].full = false;
+			if (rn[i].src1 != -1)	// If there is a source 1
+			{
+				if (rmt[rn[i].src1].val)	// If the source has been renamed, get the rob name
+					rn[i].src1 = rmt[rn[i].src1].tag;
+				else {} // the src remains the ARF register						
 			}
+
+			if (rn[i].src2 != -1)	// If there is a source 2
+			{
+				if (rmt[rn[i].src2].val)	// If the source has been renamed, get the rob name
+					rn[i].src2 = rmt[rn[i].src1].tag;
+				else {} // the src remains the ARF register
+			}
+
+			// If we reach the end of the ROB, go back to index 0 --- Circular FIFO
+			if (t == rob_size - 1)
+				t = 0;
+			else
+				t++;
+
+			rr[i] = rn[i];
+			rn[i].full = false;
 		}
-		else {} // Do nothing
 	}
 }
 
 void dynamic_scheduler::decode()
 {
-	if (!isBndlEmpty(rn) && isBndlFull(de))
+	if (isBndlEmpty(rn) && isBndlFull(de))
 	{
 		for (int i = 0; i < width; i++)
 		{
-			if (de[i].full)
-			{
-				rn[i] = de[i];
-				de[i].full = false;
-			}
-			else {} // Do nothing
+			rn[i] = de[i];
+			de[i].full = false;
 		}
 	}
 	else {} // Do nothing
@@ -203,9 +193,36 @@ bool dynamic_scheduler::advance_cycle()
 		return false;
 }
 
-//TODO: isRobFull()
-bool dynamic_scheduler::isRobFull()
+// Determines if there is enough space in the RoB for the Bundle.
+bool dynamic_scheduler::isEnoughRob()
 {
+	if (h < t)
+	{
+		if (rob_size - (t - h) + 1 >= width)
+			return true;
+		else
+			return false;
+	}
+	else
+	{
+		if (h - t >= width)
+			return true;
+		else 
+			return false;
+	}
+}
+
+// Returns true if there is enough room in the IQ for the bundle
+bool dynamic_scheduler::isEnoughIQ()
+{
+	int j = 0;
+	for (int i = 0; i < iq_size; i++)
+	{
+		if (iq[i].val = false)
+			if (++j >= width)
+				return true;
+	}
+
 	return false;
 }
 

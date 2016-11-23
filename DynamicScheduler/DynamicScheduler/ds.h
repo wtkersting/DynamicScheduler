@@ -20,6 +20,7 @@ private:
 	vector<ROB> rob;	// ReOrder Buffer
 	vector<int> r;		// # of Architectual Registers - ARF
 	vector<RMT> rmt;	// # of Architectual Registers
+	vector<EL> el;		// execution list
 
 	int h, t;	// Head and tail pointers for ROB
 
@@ -29,21 +30,21 @@ private:
 	vector<std::string> _splt_str;
 	std::string _pc;
 
-	vector<bndl> fe;
-	vector<bndl> de;
-	vector<bndl> rn;
-	vector<bndl> rr;
-	vector<bndl> di;
-	vector<bndl> is;
-	vector<bndl> ex;
-	vector<bndl> wb;
-	vector<bndl> rt;
+	vector<instr> fe;
+	vector<instr> de;
+	vector<instr> rn;
+	vector<instr> rr;
+	vector<instr> di;
+
 
 	int _pl;	// # instructions in the pipeline
 
-	bool isRobFull();
-	bool isBndlEmpty(vector<bndl> b);
-	bool isBndlFull(vector<bndl> b);
+	bool isEnoughRob();
+	bool isEnoughIQ();
+	bool exRdy(int op);
+	int getLatency(int op);
+	bool isBndlEmpty(vector<instr> b);
+	bool isBndlFull(vector<instr> b);
 
 public:
 	long rob_size, iq_size, width, cache_size, p;

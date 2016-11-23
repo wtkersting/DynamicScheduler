@@ -43,15 +43,6 @@ int main(int args, char* argv[])
 {
 	dynamic_scheduler ds(STOI(argv[1]), STOI(argv[2]), STOI(argv[3]), STOI(argv[4]), STOI(argv[5]), argv[6]);
 
-	do_ds(ds);
-
-	return 1;
-}
-
-void do_ds(dynamic_scheduler ds)
-{
-	std::string tf = ds.getTF();
-
 	cout << ds.getRobSize() << endl;
 	cout << ds.getIQSize() << endl;
 	cout << ds.getWidth() << endl;
@@ -59,33 +50,18 @@ void do_ds(dynamic_scheduler ds)
 	cout << ds.getP() << endl;
 	cout << ds.getTF() << endl;
 
-	vector<IQ> iq(ds.getIQSize());
-	vector<ROB> rob(ds.getRobSize());
-	vector<ARF> r(67);		// # of Architectual Registers
-	vector<RMT> rmt(67);	// # of Architectual Registers
+	ds.initialize();
 
-	std::ifstream infile(tf.c_str());
-	std::string line;
-	long cycle = 0;
-	vector<std::string> splt_str;
-	std::string pc;
-	int op;
-	int dst;
-	int src1;
-	int src2;
+	do {
+		
+	} while (ds.advance_cycle());
 
-	while (std::getline(infile, line))
-	{
-		splt_str = split(line);
-		pc = hexToBin(splt_str[0]);
-		op = STOI(splt_str[1].c_str());
-		dst = STOI(splt_str[2].c_str());
-		src1 = STOI(splt_str[3].c_str());
-		src2 = STOI(splt_str[4].c_str());
+	return 1;
+}
 
-		cout << pc << "\tfu{" << op << "}\tsrc{" << src1 << "," <<src2 <<"}\tdst{" << dst << "}\tFE{" << cycle << "," << ds.getWidth() << "}\t" << endl;
-		cycle++;
-	}
+void do_ds(dynamic_scheduler ds)
+{
+	
 }
 
 int getLatency(int operation)

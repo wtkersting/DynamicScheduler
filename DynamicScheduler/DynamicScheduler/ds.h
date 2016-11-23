@@ -13,37 +13,73 @@ using namespace std;
 
 class dynamic_scheduler
 {
-	public:
-		long rob_size;
-		long iq_size;
-		long width;
-		long cache_size;
-		long p;
-		std::string tracefile;
+private:
+	vector<IQ> iq;		// Issue Queue
+	vector<ROB> rob;	// ReOrder Buffer
+	vector<ARF> r;		// # of Architectual Registers
+	vector<RMT> rmt;	// # of Architectual Registers
 
-		dynamic_scheduler(long r, long i, long w, long c, long P, std::string tf)
-		{
-			rob_size = r;
-			iq_size = i;
-			width = w;
-			cache_size = c;
-			p = P;
-			tracefile = tf;
-		}
+	std::ifstream infile;
+	std::string line;
 
-		void setRobSize(long rob);
-		void setIQSize(long iq);
-		void setWidth(long w);
-		void setCacheSize(long c);
-		void setP(long P);
-		void setTF(std::string tf);
+	vector<std::string> splt_str;
+	std::string pc;
 
-		long getRobSize(void);
-		long getIQSize(void);
-		long getWidth(void);
-		long getCacheSize(void);
-		long getP(void);
-		std::string getTF(void);
+	int op;
+	int dst;
+	int src1;
+	int src2;
+
+public:
+	long rob_size;
+	long iq_size;
+	long width;
+	long cache_size;
+	long p;
+	std::string tracefile;
+
+	long cycle = 0;
+
+	dynamic_scheduler(long r, long i, long w, long c, long P, std::string tf)
+	{
+		rob_size = r;
+		iq_size = i;
+		width = w;
+		cache_size = c;
+		p = P;
+		tracefile = tf;
+
+		this->iq.resize(iq_size);
+		this->rob.resize(rob_size);
+		this->r.resize(67);
+		this->rmt.resize(67);
+	}
+
+	void retire();
+	void writeback();
+	void execute();
+	void issue();
+	void regWrite();
+	void rename();
+	void decode();
+	void fetch();
+	bool advance_cycle();
+
+	void initialize();
+
+	void setRobSize(long rob);
+	void setIQSize(long iq);
+	void setWidth(long w);
+	void setCacheSize(long c);
+	void setP(long P);
+	void setTF(std::string tf);
+
+	long getRobSize(void);
+	long getIQSize(void);
+	long getWidth(void);
+	long getCacheSize(void);
+	long getP(void);
+	std::string getTF(void);
 };
 
 class pipeline

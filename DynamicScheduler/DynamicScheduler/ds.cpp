@@ -1,4 +1,66 @@
 #include "ds.h"
+#include "utils.h"
+
+void dynamic_scheduler::retire()
+{
+
+}
+
+void dynamic_scheduler::writeback()
+{
+
+}
+
+void dynamic_scheduler::execute()
+{
+
+}
+
+void dynamic_scheduler::issue()
+{
+
+}
+
+void dynamic_scheduler::regWrite()
+{
+
+}
+
+void dynamic_scheduler::rename()
+{
+
+}
+
+void dynamic_scheduler::decode()
+{
+
+}
+
+void dynamic_scheduler::fetch()
+{
+	getline(this->infile, this->line);
+}
+
+bool dynamic_scheduler::advance_cycle()
+{
+	cout << pc << "\tfu{" << op << "}\tsrc{" << src1 << "," << src2 << "}\tdst{" << dst << "}\tFE{" << cycle << "," << width << "}\t" << endl;
+	cycle++;
+
+	if (getline(this->infile, this->line))
+		return true;
+	else
+		return false;
+}
+
+void dynamic_scheduler::initialize()
+{
+	this->splt_str = split(line);
+	this->pc = hexToBin(splt_str[0]);
+	this->op = STOI(splt_str[1].c_str());
+	this->dst = STOI(splt_str[2].c_str());
+	this->src1 = STOI(splt_str[3].c_str());
+	this->src2 = STOI(splt_str[4].c_str());
+}
 
 void dynamic_scheduler::setRobSize(long rob)
 {

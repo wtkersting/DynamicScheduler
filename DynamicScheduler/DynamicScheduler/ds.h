@@ -38,7 +38,7 @@ public:
 	long p;
 	std::string tracefile;
 
-	long cycle = 0;
+	long cycle;
 
 	dynamic_scheduler(long r, long i, long w, long c, long P, std::string tf)
 	{
@@ -53,16 +53,20 @@ public:
 		this->rob.resize(rob_size);
 		this->r.resize(67);
 		this->rmt.resize(67);
+
+		this->cycle = 0;
 	}
 
 	void retire();
 	void writeback();
 	void execute();
 	void issue();
-	void regWrite();
+	void dispatch();
+	void regRead();
 	void rename();
 	void decode();
 	void fetch();
+
 	bool advance_cycle();
 
 	void initialize();

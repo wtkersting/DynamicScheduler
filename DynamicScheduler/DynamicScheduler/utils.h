@@ -9,7 +9,6 @@
 #include <bitset>
 #include <vector>
 #include <math.h>
-#include <iostream>
 #include <algorithm>
 #include <iterator>
 
@@ -80,7 +79,7 @@ std::string BTOH(std::string bin)
 	while (bin.length() % 4)
 		bin = '0' + bin;
 
-	string rest("0x"),tmp = "0000";
+	std::string rest("0x"),tmp = "0000";
 	int len = bin.length()/4;
 	for (int i=0; i<bin.length(); i+=4)
 	{
@@ -204,4 +203,15 @@ std::vector<std::string> split(std::string str)
 		istream_iterator<string>(),
 		back_inserter(tokens));
     return tokens;
+}
+
+// Takes a vector of bundles, returns index of empty bundle.
+// If no empty index, returns -1
+int emptyIndx(std::vector<bndl> b)
+{
+	for (int i = 0; i < b.size(); i++)
+		if (!b[i].full)
+			return i;
+
+	return -1;
 }

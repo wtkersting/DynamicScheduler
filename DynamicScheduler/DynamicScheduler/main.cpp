@@ -1,5 +1,3 @@
-#include "ds.h"
-#include "utils.h"
 #include <iostream>
 #include <stdio.h>
 #include <stdarg.h>
@@ -11,9 +9,9 @@
 #include <vector>
 #include <math.h>
 
-using namespace std;
+#include "ds.h"
 
-void do_ds(dynamic_scheduler ds);
+using namespace std;
 
 /**
 	ROB_SIZE:	16
@@ -41,7 +39,7 @@ void do_ds(dynamic_scheduler ds);
 //	Arguments: ROB_SIZE IQ_SIZE WIDTH CACHE_SIZE P tracefile
 int main(int args, char* argv[])
 {
-	dynamic_scheduler ds(STOI(argv[1]), STOI(argv[2]), STOI(argv[3]), STOI(argv[4]), STOI(argv[5]), argv[6]);
+	dynamic_scheduler ds(atoi(argv[1]), atoi(argv[2]), atoi(argv[3]), atoi(argv[4]), atoi(argv[5]), argv[6]);
 
 	cout << ds.getRobSize() << endl;
 	cout << ds.getIQSize() << endl;
@@ -50,36 +48,18 @@ int main(int args, char* argv[])
 	cout << ds.getP() << endl;
 	cout << ds.getTF() << endl;
 
-	ds.initialize();
-
 	do {
-		
+		ds.retire();
+		ds.writeback();
+		ds.execute();
+		ds.issue();
+		ds.dispatch();
+		ds.regRead();
+		ds.rename();
+		ds.decode();
+		ds.fetch();
+
 	} while (ds.advance_cycle());
 
 	return 1;
-}
-
-void do_ds(dynamic_scheduler ds)
-{
-	
-}
-
-int getLatency(int operation)
-{
-	switch (operation)
-	{
-	default:
-		cout << "Operation " << operation << " not recognized";
-		return -1;
-		break;
-	case 0:
-		return 1;	// latency = 1 cycle for op0
-		break;
-	case 1:
-		return 2;	// latency = 2 cycles for op1
-		break;
-	case 2:
-		return 5;	// latency = 5 cycles for op2
-		break;
-	}
 }

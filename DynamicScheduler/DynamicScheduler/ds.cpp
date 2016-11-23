@@ -30,6 +30,8 @@ dynamic_scheduler::dynamic_scheduler(long r, long i, long w, long c, long P, std
 	this->rr.resize(width);
 	this->di.resize(width);
 
+	this->el.resize(width*5);	// up to width * 5 executions at any given time
+
 	for (int i = 0; i < width; i++)
 	{
 		fe[i].full = false;
@@ -67,16 +69,72 @@ void dynamic_scheduler::execute()
 // OOO
 void dynamic_scheduler::issue()
 {
+	int index, oldest;
 
+	for (int i = 0; i < width; i++)
+	{
+		index = 0;
+		oldest = iq[0].age;
+
+		// Find the oldest instruction from the IQ
+		for (int j = 1; j < iq_size; j++)
+		{
+			if (iq[j].age < oldest)
+				index = j;
+		}
+
+		for (int j = 0; j < 5*width; j++)
+		{
+			if (!el[j].val)
+			{
+				// Add instruction to execution list
+				el[j].val = true;
+				el[j].src1 = iq[index].s1_val;
+				el[j].src2 = iq[index].s2_val;
+				el[j].dst = iq[index].dst_tag;
+				el[j].timer = getLatency(iq[index].op);
+
+				// Remove instruction from IQ
+				iq[index].s1_rdy = false;
+				iq[index].s2_rdy = false;
+				iq[index].val = false;
+
+				break;	// break after filling out one entry in the execution list
+			}
+		}
+	}	
 }
 
 void dynamic_scheduler::dispatch()
 {
+	// If the dispatch bundle is full and there is enough room in the Issue Queue
 	if (isBndlFull(di) && isEnoughIQ())
 	{
+		int j = 0;
+
 		for (int i = 0; i < width; i++)
 		{
+			// Find first <width> empty spots in the IQ
+			for (j; j < iq_size; j++)
+			{
+				if (iq[j].val = false)
+				{
+					iq[j].val = true;
+					iq[j].op = di[i].op;
 
+					iq[j].dst_tag = di[i].dst;
+					iq[j].s1_rdy = true; // TODO: Make this work properly
+					iq[j].s1_val = di[i].src1;
+					iq[j].s2_rdy = true; // Same here ^
+					iq[j].s2_val = di[i].src2;
+
+					// Set an age to be used later
+					iq[j].age = _cycle;
+					
+					// Empty the di instruction
+					di[i].full = false;
+				}
+			}
 		}
 	}
 }
@@ -226,8 +284,33 @@ bool dynamic_scheduler::isEnoughIQ()
 	return false;
 }
 
+bool dynamic_scheduler::exRdy(int op)
+{
+	for (int i = 0; i < width; i++)
+	{
+
+	}
+}
+
+// Returns the latency for a given operation
+int dynamic_scheduler::getLatency(int op)
+{
+	switch (op)
+	{
+	case 0:
+		return 1;
+		break;
+	case 1:
+		return 2;
+		break;
+	case 2:
+		return 5;
+		break;
+	}
+}
+
 // Returns falls unless every instruction is empty in the bundle.
-bool dynamic_scheduler::isBndlEmpty(vector<bndl> b)
+bool dynamic_scheduler::isBndlEmpty(vector<instr> b)
 {
 	for (int i = 0; i < b.size(); i++)
 		if (b[i].full)
@@ -237,7 +320,7 @@ bool dynamic_scheduler::isBndlEmpty(vector<bndl> b)
 }
 
 // Returns false unless every instruction is full in the bundle.
-bool dynamic_scheduler::isBndlFull(vector<bndl> b)
+bool dynamic_scheduler::isBndlFull(vector<instr> b)
 {
 	for (int i = 0; i < b.size(); i++)
 		if (!b[i].full)

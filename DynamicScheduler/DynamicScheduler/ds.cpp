@@ -21,7 +21,12 @@ void dynamic_scheduler::issue()
 
 }
 
-void dynamic_scheduler::regWrite()
+void dynamic_scheduler::dispatch()
+{
+
+}
+
+void dynamic_scheduler::regRead()
 {
 
 }

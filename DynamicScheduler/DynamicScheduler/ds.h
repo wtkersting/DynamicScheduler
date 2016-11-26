@@ -18,11 +18,12 @@ class dynamic_scheduler
 private:
 	vector<IQ> iq;		// Issue Queue
 	vector<ROB> rob;	// ReOrder Buffer
-	vector<int> r;		// # of Architectual Registers - ARF
 	vector<RMT> rmt;	// # of Architectual Registers
 	vector<EL> el;		// execution list
 
 	int h, t;	// Head and tail pointers for ROB
+	long prnt;
+	bool NO_ROOM;
 
 	std::ifstream _infile;
 	std::string _line;
@@ -36,11 +37,18 @@ private:
 	vector<instr> rr;
 	vector<instr> di;
 
+	vector<instr> wb;
 
 	int _pl;	// # instructions in the pipeline
+	long i_count; // number of instructions
+
+	void exWakeup(int dst);
 
 	bool isEnoughRob();
 	bool isEnoughIQ();
+	bool isIq();
+	bool isIqRdy();
+	int getRdyIq();
 	bool exRdy(int op);
 	int getLatency(int op);
 	bool isBndlEmpty(vector<instr> b);
@@ -50,7 +58,9 @@ public:
 	long rob_size, iq_size, width, cache_size, p;
 	std::string tracefile;
 
-	long _cycle;
+	vector<OUT> out;
+
+	long cycle;
 
 	dynamic_scheduler(long r, long i, long w, long c, long P, std::string tf);
 

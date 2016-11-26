@@ -13,6 +13,7 @@ dynamic_scheduler::dynamic_scheduler(long r, long i, long w, long c, long P, std
 	h = 3;
 	t = 3;
 
+	fin = false;
 	NO_ROOM = false;
 
 	i_count = 0;
@@ -41,9 +42,9 @@ dynamic_scheduler::dynamic_scheduler(long r, long i, long w, long c, long P, std
 // OOO
 void dynamic_scheduler::retire()
 {
-	if (rob[h].rdy)
+	for (int i = 0; i < width; i++)
 	{
-		for (int i = 0; i < width; i++)
+		if (rob[h].rdy)
 		{
 			// Remove from RMT if there was a destination
 			if (rob[h].dst != -1 && h == rmt[rob[h].dst].tag)
@@ -60,12 +61,19 @@ void dynamic_scheduler::retire()
 
 			_pl--;
 
+			if (_infile.eof() && rob[h].i == out.size() - 1)
+				fin = true;
+
 			if (h == rob_size - 1)
 				h = 0;
 			else
 				h++;
 
 			NO_ROOM = false;
+		}
+		else
+		{
+			break;
 		}
 	}
 }
@@ -144,7 +152,7 @@ void dynamic_scheduler::issue()
 				out[iq[i].i].is_beg = cycle;
 
 				iq[i].log = true;
-				break;
+				//break;
 			}
 		}
 		
@@ -201,12 +209,12 @@ void dynamic_scheduler::issue()
 void dynamic_scheduler::dispatch()
 {
 	// If the dispatch bundle is full and there is enough room in the Issue Queue
-	if (!isBndlEmpty(di) && isEnoughIQ())
+	if (isBndlFull(di) && isEnoughIQ())
 	{
-		int j = 0;
-
 		for (int i = 0; i < width; i++)
 		{
+			int j = 0;
+
 			// Find first <width> empty spots in the IQ
 			for (j; j < iq_size; j++)
 			{
@@ -241,124 +249,122 @@ void dynamic_scheduler::dispatch()
 
 void dynamic_scheduler::regRead()
 {
-	if (isBndlEmpty(di) && !isBndlEmpty(rr))
+	if (isBndlFull(rr))
 	{
-		for (int i = 0; i < width; i++)
+		if (isBndlEmpty(di))
 		{
-			// If the source is directly from the ARF, the source is ready.
-			if (!rr[i].s1rob)
-				rr[i].s1rdy = true;
-			else if (rob[rr[i].src1].rdy)	// Else, if the ROB is ready, this source is ready too
-				rr[i].s1rdy = true;
+			for (int i = 0; i < width; i++)
+			{
+				// If the source is directly from the ARF, the source is ready.
+				if (!rr[i].s1rob)
+					rr[i].s1rdy = true;
+				else if (rob[rr[i].src1].rdy)	// Else, if the ROB is ready, this source is ready too
+					rr[i].s1rdy = true;
 
-			if (!rr[i].s2rob)
-				rr[i].s2rdy = true;
-			else if (rob[rr[i].src2].rdy)
-				rr[i].s2rdy = true;
+				if (!rr[i].s2rob)
+					rr[i].s2rdy = true;
+				else if (rob[rr[i].src2].rdy)
+					rr[i].s2rdy = true;
 			
-			out[rr[i].i].rn_dur = cycle - out[rr[i].i].rn_beg;
-			out[rr[i].i].rr_beg = cycle;
+				//out[rr[i].i].rn_dur = cycle - out[rr[i].i].rn_beg;
+				//out[rr[i].i].rr_beg = cycle;
 
-			di[i] = rr[i];
-			rr[i].full = false;
+				di[i] = rr[i];
+				rr[i].full = false;
+			}
 		}
 	}
 }
 
 void dynamic_scheduler::rename()
 {
-	if (isBndlEmpty(rr) && !isBndlEmpty(rn) && isEnoughRob())
+	if (isBndlFull(rn))
 	{
-		for (int i = 0; i < width; i++)
+		if (isBndlEmpty(rr) && isEnoughRob())
 		{
-			// Rename the source and destination registers - be sure to rename sources before destination
-			if (rn[i].src1 != -1)	// If there is a source 1
+			for (int i = 0; i < width; i++)
 			{
-				if (rmt[rn[i].src1].val)	// If the source has been renamed, get the rob name
+				// Rename the source and destination registers - be sure to rename sources before destination
+				if (rn[i].src1 != -1)	// If there is a source 1
 				{
-					rn[i].src1 = rmt[rn[i].src1].tag;
-					rn[i].s1rob = true;		// Set this flag so that we know we have to wait until it is ready
-					rn[i].s1rdy = rob[rn[i].src1].rdy;
+					if (rmt[rn[i].src1].val)	// If the source has been renamed, get the rob name
+					{
+						rn[i].src1 = rmt[rn[i].src1].tag;
+						rn[i].s1rob = true;		// Set this flag so that we know we have to wait until it is ready
+						rn[i].s1rdy = rob[rn[i].src1].rdy;
+					}
+					else {} // the src remains the ARF register						
 				}
-				else {} // the src remains the ARF register						
-			}
 
-			if (rn[i].src2 != -1)	// If there is a source 2
-			{
-				if (rmt[rn[i].src2].val)	// If the source has been renamed, get the rob name
+				if (rn[i].src2 != -1)	// If there is a source 2
 				{
-					rn[i].src2 = rmt[rn[i].src2].tag;
-					rn[i].s2rob = true;		// Set this flag so that we know we have to wait until it is ready
-					rn[i].s2rdy = rob[rn[i].src2].rdy;
+					if (rmt[rn[i].src2].val)	// If the source has been renamed, get the rob name
+					{
+						rn[i].src2 = rmt[rn[i].src2].tag;
+						rn[i].s2rob = true;		// Set this flag so that we know we have to wait until it is ready
+						rn[i].s2rdy = rob[rn[i].src2].rdy;
+					}
+					else {} // the src remains the ARF register
 				}
-				else {} // the src remains the ARF register
-			}
 
 
-			if (rn[i].dst != -1)	// If there is a destination
-			{
-				rmt[rn[i].dst].val = true;	// v = true
-				rmt[rn[i].dst].tag = t;	// tag = the current tail pointer for the ROB
-			}
+				if (rn[i].dst != -1)	// If there is a destination
+				{
+					rmt[rn[i].dst].val = true;	// v = true
+					rmt[rn[i].dst].tag = t;	// tag = the current tail pointer for the ROB
+				}
 
-			rob[t].val = 0;			// Clear the value, we don't care about this yet
-			rob[t].dst = rn[i].dst;
-			rob[t].rdy = 0;
-			rob[t].exc = 0;
-			rob[t].mis = 0;
-			rob[t].pc = rn[i].pc;	
+				rob[t].val = 0;			// Clear the value, we don't care about this yet
+				rob[t].dst = rn[i].dst;
+				rob[t].rdy = 0;
+				rob[t].exc = 0;
+				rob[t].mis = 0;
+				rob[t].pc = rn[i].pc;	
 
-			rob[t].i = rn[i].i;
+				rob[t].i = rn[i].i;
 
-			//if (rn[i].dst != -1)	// TODO: Check this out
-			rn[i].dst = t;		// Dst, if it exists, always gets renamed
+				//if (rn[i].dst != -1)	// TODO: Check this out
+				rn[i].dst = t;		// Dst, if it exists, always gets renamed
 
-			/*if (t != h-1)
-			{
+				out[rn[i].i].rn_dur = cycle - out[rn[i].i].rn_beg + 1;
+				out[rn[i].i].rr_beg = cycle + 1;
+
+				if (t == h-1 || (t == rob_size - 1 && h == 0))
+					NO_ROOM = true;
+
 				// If we reach the end of the ROB, go back to index 0 --- Circular FIFO
 				if (t == rob_size - 1)
 					t = 0;
 				else
 					t++;
+
+				rr[i] = rn[i];
+				rn[i].full = false;
 			}
-			else
-			{
-				//cout << "Not good" << endl;
-				NO_ROOM = true;
-			} */
-
-			if (t == h-1 || (t == rob_size - 1 && h == 0))
-				NO_ROOM = true;
-
-			// If we reach the end of the ROB, go back to index 0 --- Circular FIFO
-			if (t == rob_size - 1)
-				t = 0;
-			else
-				t++;
-
-			out[rn[i].i].de_dur = cycle - out[rn[i].i].de_beg;
-			out[rn[i].i].rn_beg = cycle;
-
-			rr[i] = rn[i];
-			rn[i].full = false;
 		}
 	}
 }
 
 void dynamic_scheduler::decode()
 {
-	if (isBndlEmpty(rn) && !isBndlEmpty(de))
+	if (isBndlFull(de) && isBndlEmpty(rn))
 	{
 		for (int i = 0; i < width; i++)
 		{
-			out[de[i].i].fe_dur = cycle - out[de[i].i].fe_beg;
-			out[de[i].i].de_beg = cycle;
+			/*if (!out[de[i].i].de_ack)
+			{
+				out[de[i].i].de_beg = cycle;
+				out[de[i].i].de_ack = true;
+			}*/
 
 			rn[i] = de[i];
 			de[i].full = false;
+
+			out[de[i].i].de_dur = cycle - out[de[i].i].de_beg + 1;
+			out[de[i].i].rn_beg = cycle + 1;
+			
 		}
 	}
-	else {} // Do nothing
 }
 
 void dynamic_scheduler::fetch()
@@ -383,6 +389,8 @@ void dynamic_scheduler::fetch()
 				OUT n;
 				n.ind = i_count++;
 				n.fe_beg = cycle;
+				n.fe_dur = 1;	// fe always only takes one cycle
+				n.de_beg = cycle + 1;
 				n.src1 = fe[i].src1;
 				n.src2 = fe[i].src2;
 				n.dst = fe[i].dst;
@@ -404,9 +412,10 @@ bool dynamic_scheduler::advance_cycle()
 	//	cout << cycle << "\tfu{" << fe[i].op << "}\tsrc{" << fe[i].src1 << "," << fe[i].src2 << "}\tdst{" << fe[i].dst << "}\tFE{" << cycle << "," << width << "}\t" << endl;
 	
 	int i = prnt;
+	/*
 	if (out[i].fe_dur != -1 && out[i].de_dur != -1 && out[i].rn_dur != -1 && out[i].rr_dur != -1 && out[i].di_dur != -1 && out[i].is_dur != -1 && out[i].ex_dur != -1 && out[i].wb_dur != -1 && out[i].rt_dur != -1)
 	{
-		cout << i << " fu{" << out[i].fu << "} src{" << out[i].src1 << "," << out[i].src2 << "} dst{" << out[i].dst 
+		std::cout << i << " fu{" << out[i].fu << "} src{" << out[i].src1 << "," << out[i].src2 << "} dst{" << out[i].dst 
 			<< "} FE{" << out[i].fe_beg << "," << out[i].fe_dur 
 			<< "} DE{" << out[i].de_beg << "," << out[i].de_dur
 			<< "} RN{" << out[i].rn_beg << "," << out[i].rn_dur
@@ -418,17 +427,20 @@ bool dynamic_scheduler::advance_cycle()
 			<< "} RT{" << out[i].rt_beg << "," << out[i].rt_dur << "}" << endl;
 
 		prnt++;
-	}
+	} */
 
 	cycle++;
 
-	if (cycle == 22)
+	if (cycle == 13)
 	{
 		int k = 1 + 2;
 	}
 
-	if (cycle == 1000)
+	if (cycle == 200)
 		int k = 1 + 2;
+
+	if (cycle == 20000)
+		int k = 0;
 
 	if (!_infile.eof() || _pl > 0)
 		return true;
@@ -436,7 +448,7 @@ bool dynamic_scheduler::advance_cycle()
 	{
 		for (int i = 0; i < out.size(); i++)
 		{
-			printf("%d fu{%d} src{%d,%d} dst{%d} FE{%d,%d} DE{%d,%d} RN{%d,%d} RR{%d,%d} DI{%d,%d} IS{%d,%d} EX{%d,%d} WB{%d,%d}, RT{%d,%d}\n",
+			std::printf("%d fu{%d} src{%d,%d} dst{%d} FE{%d,%d} DE{%d,%d} RN{%d,%d} RR{%d,%d} DI{%d,%d} IS{%d,%d} EX{%d,%d} WB{%d,%d}, RT{%d,%d}\n",
 				i, out[i].fu, out[i].src1, out[i].src2, out[i].dst,
 				out[i].fe_beg, out[i].fe_dur,
 				out[i].de_beg, out[i].de_dur,
@@ -453,19 +465,19 @@ bool dynamic_scheduler::advance_cycle()
 		double cycles = cycle;
 		double IPC = o_size / cycles;
 
-		printf("# === Simulator Command =========\n");
-		printf("# ./sim_ds %d %d %d %d %d %s\n", rob_size, iq_size, width, cache_size, p, tracefile.c_str());//, iq_size, width, cache_size, p, tracefile);
-		printf("# === Processor Configuration ===\n");
-		printf("# ROB_SIZE 	= %d\n", rob_size);
-		printf("# IQ_SIZE  	= %d\n", iq_size);
-		printf("# WIDTH    	= %d\n", width);
-		printf("# CACHE_SIZE 	= %d\n", cache_size);
-		printf("# PREFETCHING	= %d\n", p);
-		printf("# === Simulation Results ========\n");
-		printf("# Dynamic Instruction Count      = %d\n", out.size());
-		printf("# Cycles                         = %d\n", cycle);
-		printf("# Instructions Per Cycle (IPC)   = ");
-		cout << hundredths(IPC);
+		std::printf("# === Simulator Command =========\n");
+		std::printf("# ./sim_ds %d %d %d %d %d %s\n", rob_size, iq_size, width, cache_size, p, tracefile.c_str());//, iq_size, width, cache_size, p, tracefile);
+		std::printf("# === Processor Configuration ===\n");
+		std::printf("# ROB_SIZE 	= %d\n", rob_size);
+		std::printf("# IQ_SIZE  	= %d\n", iq_size);
+		std::printf("# WIDTH    	= %d\n", width);
+		std::printf("# CACHE_SIZE 	= %d\n", cache_size);
+		std::printf("# PREFETCHING	= %d\n", p);
+		std::printf("# === Simulation Results ========\n");
+		std::printf("# Dynamic Instruction Count      = %d\n", out.size());
+		std::printf("# Cycles                         = %d\n", cycle);
+		std::printf("# Instructions Per Cycle (IPC)   = ");
+		std::cout << hundredths(IPC);
 
 		return false;
 	}
@@ -510,7 +522,7 @@ bool dynamic_scheduler::isEnoughRob()
 
 	if (h < t)
 	{
-		if (rob_size - (t - h) + 1 >= width)
+		if (rob_size - (t - h) >= width) // HERE
 			return true;
 		else
 			return false;

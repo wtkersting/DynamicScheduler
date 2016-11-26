@@ -84,7 +84,7 @@ extern struct OUT
 {
 	OUT() : ind(0), fu(-1), src1(-1), src2(-1), fe_beg(-1), fe_dur(-1), de_beg(-1), de_dur(-1), rn_beg(-1),
 		rn_dur(-1), rr_beg(-1), rr_dur(-1), di_beg(-1), di_dur(-1), is_beg(-1), is_dur(-1), ex_beg(-1),
-		ex_dur(-1), wb_beg(-1), wb_dur(-1), rt_beg(-1), rt_dur(-1) {}
+		ex_dur(-1), wb_beg(-1), wb_dur(-1), rt_beg(-1), rt_dur(-1), de_ack(false), rn_ack(false) {}
 
 	long ind;
 	int fu;
@@ -111,4 +111,7 @@ extern struct OUT
 	int wb_dur;
 	long rt_beg;
 	int rt_dur;
+
+	bool de_ack;
+	bool rn_ack;
 };

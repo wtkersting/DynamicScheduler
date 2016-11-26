@@ -205,10 +205,10 @@ std::vector<std::string> split(std::string str)
     return tokens;
 }
 
-/*
-// Takes a vector of bundles, returns index of empty bundle.
+
+// Takes a bundle of instructions, returns index of empty bundle.
 // If no empty index, returns -1
-int emptyIndx(std::vector<instr> b)
+int getEmptyIndx(std::vector<instr> b)
 {
 	for (int i = 0; i < b.size(); i++)
 		if (!b[i].full)
@@ -216,4 +216,3 @@ int emptyIndx(std::vector<instr> b)
 
 	return -1;
 }
-*/

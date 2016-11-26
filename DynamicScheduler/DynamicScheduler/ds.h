@@ -42,6 +42,8 @@ private:
 	int _pl;	// # instructions in the pipeline
 	long i_count; // number of instructions
 
+	bool fin;
+
 	void exWakeup(int dst);
 
 	bool isEnoughRob();
